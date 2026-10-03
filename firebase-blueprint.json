@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Private user account profile document containing student information and private settings.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique Firebase Authentication UID." },
+        "email": { "type": "string", "format": "email", "description": "Private account email address." },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 80, "description": "Full student name." },
+        "course": { "type": "string", "description": "Degree course (e.g. B.Tech, BCA)." },
+        "branch": { "type": "string", "description": "Academic branch or major (e.g. CSE, ECE)." },
+        "year": { "type": "string", "description": "Academic year (e.g. 1st Year, 2nd Year)." },
+        "communicationLevel": { "type": "string", "enum": ["Beginner", "Intermediate", "Advanced"], "description": "Current speaking self-assessment." },
+        "goals": { "type": "string", "description": "Primary communication goal." },
+        "interests": { "type": "string", "description": "Topics of interest." },
+        "preferredPracticeModes": { "type": "string", "description": "Preferred practice formats." },
+        "createdAt": { "type": "string", "description": "ISO timestamp of account creation." },
+        "updatedAt": { "type": "string", "description": "ISO timestamp of last update." },
+        "profileCompleted": { "type": "boolean", "description": "Whether the profile onboarding is complete." },
+        "availabilityStatus": { "type": "string", "enum": ["AVAILABLE", "BUSY", "OFFLINE"], "description": "Current status." }
+      },
+      "required": ["uid", "email", "fullName", "course", "branch", "year", "communicationLevel"]
+    },
+    "PublicProfile": {
+      "title": "PublicProfile",
+      "description": "Sanitized public profile for matchmaking and presence directory. Strictly contains no PII.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Target user UID." },
+        "displayName": { "type": "string", "description": "Public display name." },
+        "course": { "type": "string", "description": "Degree course." },
+        "branch": { "type": "string", "description": "Academic branch." },
+        "year": { "type": "string", "description": "Academic year." },
+        "communicationLevel": { "type": "string", "description": "Speaking level." },
+        "practiceModes": { "type": "string", "description": "Preferred practice modes." },
+        "interests": { "type": "string", "description": "Discussion topics." },
+        "availabilityStatus": { "type": "string", "enum": ["AVAILABLE", "BUSY", "OFFLINE"], "description": "Availability state." },
+        "updatedAt": { "type": "string", "description": "Timestamp." }
+      },
+      "required": ["uid", "displayName", "course", "branch", "year", "communicationLevel", "availabilityStatus"]
+    },
+    "PeerFeedback": {
+      "title": "PeerFeedback",
+      "description": "Constructive feedback and ratings given after a practice room session.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique feedback ID." },
+        "roomId": { "type": "string", "description": "Room identifier." },
+        "fromStudentUid": { "type": "string", "description": "UID of student who reviewed." },
+        "fromStudent": { "type": "string", "description": "Display name of reviewer." },
+        "toStudentUid": { "type": "string", "description": "UID of student being reviewed." },
+        "toStudent": { "type": "string", "description": "Display name of recipient." },
+        "practiceMode": { "type": "string", "description": "Session practice mode." },
+        "durationFormatted": { "type": "string", "description": "Duration formatted." },
+        "ratings": { "type": "object", "description": "Star ratings across 5 communication dimensions." },
+        "tags": { "type": "string", "description": "Skill badges awarded." },
+        "constructiveNotes": { "type": "string", "description": "Actionable feedback notes." },
+        "encouragement": { "type": "string", "description": "Encouraging remark." },
+        "createdAt": { "type": "string", "description": "Timestamp." }
+      },
+      "required": ["id", "fromStudentUid", "toStudentUid", "practiceMode", "ratings"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Private user account profile document containing confidential student settings."
+    },
+    "/publicProfiles/{userId}": {
+      "schema": { "$ref": "#/entities/PublicProfile" },
+      "description": "Sanitized public profile for matchmaking and presence directory. Strictly contains no PII."
+    },
+    "/peerFeedback/{feedbackId}": {
+      "schema": { "$ref": "#/entities/PeerFeedback" },
+      "description": "Constructive feedback and ratings given after a practice room session."
+    }
+  }
+}
