@@ -4,7 +4,7 @@ import { useSocket } from '../context/SocketContext';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeMode } from '../types';
 import { Moon, Palette, LogOut, Menu, X, Sparkles, MessageSquare, Video, ShieldCheck } from 'lucide-react';
-import { SpeakMateLogo } from './SpeakMateLogo';
+import { FluencisLogo } from './FluencisLogo';
 
 interface NavbarProps {
   currentTab: string;
@@ -52,7 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
         onClick={() => setCurrentTab(isLoggedIn ? 'dashboard' : 'landing')}
         className="group flex items-center gap-2.5 focus:outline-none cursor-pointer"
       >
-        <SpeakMateLogo size={38} showText={true} textClassName="text-2xl" badgeText="Student" />
+        <FluencisLogo size={38} showText={true} textClassName="text-2xl" badgeText="Student" />
       </button>
 
       {/* Desktop Navigation Links */}
@@ -99,7 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
       <div className="flex items-center gap-3">
         {/* Real-time connection badge */}
         <div
-          title={isConnected ? 'Connected to SpeakMate Server' : 'Connecting to Server...'}
+          title={isConnected ? 'Connected to Fluencis Server' : 'Connecting to Server...'}
           className="hidden lg:flex items-center gap-1.5 text-xs text-[#8fa9bb] bg-[rgba(1,15,30,0.6)] border border-[rgba(0,200,255,0.18)] px-2.5 py-1 rounded-full"
         >
           <span
@@ -335,7 +335,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
                 <LogOut className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Log Out of SpeakMate?</h3>
+                <h3 className="text-base font-bold text-white">Log Out of Fluencis?</h3>
                 <p className="text-xs text-[#8ca8ba]">You will need to sign in again to access practice rooms.</p>
               </div>
             </div>

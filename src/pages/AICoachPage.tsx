@@ -238,7 +238,7 @@ export const AICoachPage: React.FC = () => {
       {/* Header */}
       <section className="space-y-3">
         <p className="text-xs font-bold tracking-[1.5px] text-[#20f5a2] uppercase">
-          SPEAKMATE AI LAB
+          FLUENCIS AI LAB
         </p>
         <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
           AI Communication{' '}

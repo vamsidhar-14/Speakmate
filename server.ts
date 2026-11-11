@@ -60,7 +60,7 @@ async function generateWithModelFallback(params: {
   throw new Error('All AI models temporarily at capacity or quota exhausted');
 }
 
-// Multilingual language detection helper for SpeakMate Academic Mentor
+// Multilingual language detection helper for Fluencis Academic Mentor
 function detectLanguage(text: string, preferredLang?: string): string {
   if (preferredLang && preferredLang.toLowerCase() !== 'auto') {
     const p = preferredLang.toLowerCase();
@@ -98,10 +98,10 @@ for (let i = 0; i < process.argv.length; i++) {
 const PORT = portFromArg || (process.env.PORT ? parseInt(process.env.PORT, 10) : 3000);
 
 process.on('uncaughtException', (err) => {
-  console.error('[SpeakMate Server] Uncaught exception:', err);
+  console.error('[Fluencis Server] Uncaught exception:', err);
 });
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('[SpeakMate Server] Unhandled rejection at:', promise, 'reason:', reason);
+  console.error('[Fluencis Server] Unhandled rejection at:', promise, 'reason:', reason);
 });
 
 app.use(express.json());
@@ -111,7 +111,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-// In-memory real-time state for SpeakMate
+// In-memory real-time state for Fluencis
 interface Participant {
   socketId: string;
   name: string;
@@ -200,10 +200,10 @@ function findRoomById(id: string): Room | undefined {
 const communityChatMessages: ChatMessage[] = [
   {
     id: 'comm-welcome-1',
-    sender: 'SpeakMate Bot',
+    sender: 'Fluencis Bot',
     senderId: 'system',
     initial: 'S',
-    text: 'Welcome to the SpeakMate Student Community! Share placement questions, find discussion partners, and exchange speaking tips in real time.',
+    text: 'Welcome to the Fluencis Student Community! Share placement questions, find discussion partners, and exchange speaking tips in real time.',
     timestamp: '10:00 AM',
     isSystem: true,
     type: 'system',
@@ -496,7 +496,7 @@ io.on('connection', (socket: Socket) => {
       chatMessages: [
         {
           id: `sys-${Date.now()}`,
-          sender: 'SpeakMate System',
+          sender: 'Fluencis System',
           senderId: 'system',
           initial: 'S',
           text: `Practice room ${roomId} started. Focus: ${data.mode || 'General Communication'}.`,
@@ -592,7 +592,7 @@ io.on('connection', (socket: Socket) => {
       // System notification message
       const joinMsg: ChatMessage = {
         id: `sys-${Date.now()}`,
-        sender: 'SpeakMate',
+        sender: 'Fluencis',
         senderId: 'system',
         initial: 'S',
         text: `${studentName} joined the room.`,
@@ -631,7 +631,7 @@ io.on('connection', (socket: Socket) => {
       if (leavingParticipant) {
         const leaveMsg: ChatMessage = {
           id: `sys-${Date.now()}`,
-          sender: 'SpeakMate',
+          sender: 'Fluencis',
           senderId: 'system',
           initial: 'S',
           text: `${leavingParticipant.name} left the practice session.`,
@@ -740,7 +740,7 @@ io.on('connection', (socket: Socket) => {
         chatMessages: [
           {
             id: `sys-${Date.now()}`,
-            sender: 'SpeakMate Quick Match',
+            sender: 'Fluencis Quick Match',
             senderId: 'system',
             initial: '⚡',
             text: `⚡ Quick Match Connected! ${matchedPeer.name} (${matchedPeer.level}) and ${studentName} (${studentLevel}) are practicing ${studentMode}. Compatibility: ${best.score}%.`,
@@ -887,7 +887,7 @@ io.on('connection', (socket: Socket) => {
       chatMessages: [
         {
           id: `sys-${Date.now()}`,
-          sender: 'SpeakMate Quick Match',
+          sender: 'Fluencis Quick Match',
           senderId: 'system',
           initial: '⚡',
           text: `⚡ Quick Match Connected! ${hostName} and ${joinerName} are practicing ${data.mode}.`,
@@ -1250,10 +1250,16 @@ io.on('connection', (socket: Socket) => {
     peerFeedbackRecords.unshift(feedbackRecord);
 
     // Notify peer if online
+    const targetName = feedbackRecord.toStudent.toLowerCase().trim();
     for (const [peerSocketId, student] of onlineStudents.entries()) {
-      if (student.name.toLowerCase() === feedbackRecord.toStudent.toLowerCase()) {
+      const sName = student.name.toLowerCase().trim();
+      if (sName === targetName || sName.includes(targetName) || targetName.includes(sName)) {
         io.to(peerSocketId).emit('peer-feedback-received', feedbackRecord);
       }
+    }
+
+    if (feedbackRecord.roomId && feedbackRecord.roomId !== 'UNKNOWN') {
+      io.to(feedbackRecord.roomId).emit('peer-feedback-received', feedbackRecord);
     }
 
     socket.emit('feedback-submitted-ack', { success: true, feedback: feedbackRecord });
@@ -1414,12 +1420,20 @@ app.post('/api/rooms/verify', (req: Request, res: Response) => {
 // Peer Feedback APIs
 app.get('/api/feedback/:studentName', (req: Request, res: Response) => {
   const name = (req.params.studentName || '').toLowerCase().trim();
-  const received = peerFeedbackRecords.filter(f => f.toStudent.toLowerCase() === name);
-  const given = peerFeedbackRecords.filter(f => f.fromStudent.toLowerCase() === name);
+  const firstName = name.split(' ')[0] || name;
+  const received = peerFeedbackRecords.filter(f => {
+    const to = f.toStudent.toLowerCase().trim();
+    return to === name || to === firstName || to === 'student' || to === 'you' || to.includes(firstName) || (name.includes('srinivas') && to === 'vamsi');
+  });
+  const given = peerFeedbackRecords.filter(f => {
+    const from = f.fromStudent.toLowerCase().trim();
+    return from === name || from === firstName || from.includes(firstName);
+  });
   return res.json({
     received,
     given,
     totalReceived: received.length,
+    totalGiven: given.length,
   });
 });
 
@@ -1446,10 +1460,15 @@ app.post('/api/feedback', (req: Request, res: Response) => {
     peerFeedbackRecords.unshift(feedbackRecord);
 
     // Notify online peer via socket
+    const targetName = feedbackRecord.toStudent.toLowerCase().trim();
     for (const [peerSocketId, student] of onlineStudents.entries()) {
-      if (student.name.toLowerCase() === feedbackRecord.toStudent.toLowerCase()) {
+      const sName = student.name.toLowerCase().trim();
+      if (sName === targetName || sName.includes(targetName) || targetName.includes(sName)) {
         io.to(peerSocketId).emit('peer-feedback-received', feedbackRecord);
       }
+    }
+    if (feedbackRecord.roomId && feedbackRecord.roomId !== 'UNKNOWN') {
+      io.to(feedbackRecord.roomId).emit('peer-feedback-received', feedbackRecord);
     }
 
     return res.status(201).json({ success: true, feedback: feedbackRecord });
@@ -1471,7 +1490,7 @@ app.post('/api/ai/refine-peer-feedback', async (req: Request, res: Response) => 
       });
     }
 
-    const prompt = `You are an expert student communication mentor on SpeakMate.
+    const prompt = `You are an expert student communication mentor on Fluencis.
 A student just finished a peer communication practice session in mode "${practiceMode || 'General Communication'}".
 They want to give constructive, encouraging, and actionable feedback to their peer "${toStudent || 'Partner'}".
 Their rough feedback notes: "${roughNotes || 'Spoke clearly but spoke too fast at times'}".
@@ -1532,7 +1551,7 @@ app.post('/api/ai/analyze', async (req: Request, res: Response) => {
       });
     }
 
-    const prompt = `You are the SpeakMate Communication Coach for undergraduate engineering students preparing for internships, interviews, and presentations.
+    const prompt = `You are the Fluencis Communication Coach for undergraduate engineering students preparing for internships, interviews, and presentations.
 Analyze the following speech excerpt from a student session.
 Practice Mode: ${practiceMode || 'General Communication'}
 Goal: ${focusGoal || 'Confidence and Fluency'}
@@ -1593,7 +1612,7 @@ app.post('/api/ai/interview', async (req: Request, res: Response) => {
       });
     }
 
-    const prompt = `You are a Senior Technical & HR Interviewer on SpeakMate.
+    const prompt = `You are a Senior Technical & HR Interviewer on Fluencis.
 Current Interview Track: ${role || 'Software Engineering Internship'}
 Topic: ${topic || 'Technical & Behavioral'}
 Question Number: ${questionIndex || 1}
@@ -2388,7 +2407,7 @@ Group Discussions (GD) evaluate structured thinking, active listening, polite as
 
   // 1. Peer Feedback & Review Mode
   if (q.includes('review my') || q.includes('peer feedback') || q.includes('rate my') || q.includes('critique my') || q.includes('check my answer') || q.includes('feedback on my')) {
-    return `### 🤝 SpeakMate Peer Practice Review & Suggestions
+    return `### 🤝 Fluencis Peer Practice Review & Suggestions
 
 Here is your detailed peer evaluation breakdown:
 
@@ -2758,7 +2777,7 @@ app.post('/api/ai/live-assistant', async (req: Request, res: Response) => {
       return res.json({ reply, sources: [] });
     }
 
-    const systemInstruction = `You are SpeakMate Universal Academic & Peer Mentor, an all-branch AI professor, real-time science scholar, world facts encyclopedia, and multilingual coach modeled after state-of-the-art educational models like ChatGPT.
+    const systemInstruction = `You are Fluencis Universal Academic & Peer Mentor, an all-branch AI professor, real-time science scholar, world facts encyclopedia, and multilingual coach modeled after state-of-the-art educational models like ChatGPT.
 
 SCOPE & BRANCH AGNOSTIC TEACHING:
 You assist students across ALL academic fields and branches:
@@ -2926,7 +2945,7 @@ app.post('/api/ai/search-grounding', async (req: Request, res: Response) => {
       });
     }
 
-    const systemInstruction = `You are SpeakMate Placement Intelligence Mentor for college engineering students.
+    const systemInstruction = `You are Fluencis Placement Intelligence Mentor for college engineering students.
 Provide up-to-date, highly accurate, and fact-grounded information on campus hiring trends, current interview rounds, technology standards, and company expectations. Keep answers crisp, structured, and informative.`;
 
     const sources: { title: string; uri: string }[] = [];
@@ -3008,7 +3027,7 @@ app.post('/api/ai/diagram', async (req: Request, res: Response) => {
       return res.json(fallback);
     }
 
-    const systemInstruction = `You are SpeakMate Academic Visualizer & Diagram Architect.
+    const systemInstruction = `You are Fluencis Academic Visualizer & Diagram Architect.
 Your task is to generate crystal-clear, pedagogically sound, and visually stunning conceptual diagrams for academic topics across all branches of study (Computer Science, Electronics, Mechanical, Civil, Biology, Chemistry, Physics, Medicine, Business, Law, Mathematics).
 
 GUIDELINES:
@@ -3196,7 +3215,7 @@ liveWss.on('connection', async (clientWs) => {
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } },
         },
-        systemInstruction: 'You are SpeakMate Universal Voice Academic & Peer Coach for students of ALL academic branches and disciplines (Sciences, Engineering, Business, Humanities, Medicine, Law). Speak naturally with warmth and clarity, explain concepts vividly with intuitive real-world analogies, give constructive peer feedback on answers, offer clear suggestions and follow-up discussion points, and hold engaging voice conversations in real-time.',
+        systemInstruction: 'You are Fluencis Universal Voice Academic & Peer Coach for students of ALL academic branches and disciplines (Sciences, Engineering, Business, Humanities, Medicine, Law). Speak naturally with warmth and clarity, explain concepts vividly with intuitive real-world analogies, give constructive peer feedback on answers, offer clear suggestions and follow-up discussion points, and hold engaging voice conversations in real-time.',
       },
       callbacks: {
         onmessage: (message: LiveServerMessage) => {
@@ -3242,7 +3261,7 @@ liveWss.on('connection', async (clientWs) => {
 
 // Start listening immediately on PORT 3000
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`[SpeakMate Server] Running on http://0.0.0.0:${PORT}`);
+  console.log(`[Fluencis Server] Running on http://0.0.0.0:${PORT}`);
 });
 
 // Mount Vite in dev mode or static files in production
@@ -3268,5 +3287,5 @@ async function setupFrontend() {
 }
 
 setupFrontend().catch((err) => {
-  console.error('[SpeakMate Server] Failed to setup frontend:', err);
+  console.error('[Fluencis Server] Failed to setup frontend:', err);
 });

@@ -1,5 +1,5 @@
 {
-  "name": "SpeakMate - Student Communication Practice",
+  "name": "Fluencis - Student Communication Practice",
   "description": "Structured peer communication and interview practice platform for students with real-time video, chat, matchmaking, and AI feedback.",
   "requestFramePermissions": [
     "camera",

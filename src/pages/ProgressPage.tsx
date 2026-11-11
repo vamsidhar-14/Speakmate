@@ -118,8 +118,27 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigate }) => {
   ];
 
   // Dynamically evaluated achievement badges
-  const streakDays = 4;
-  const totalMinutes = 75 + totalReviews * 15;
+  const streakDays = user?.practiceMetrics?.currentStreakDays ?? (() => {
+    try {
+      const stored = localStorage.getItem(`fluencisPracticeMetrics_${user?.fullName || 'student'}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.currentStreakDays ?? 0;
+      }
+    } catch {}
+    return 0;
+  })();
+
+  const totalMinutes = user?.practiceMetrics?.totalPracticeMinutes ?? (() => {
+    try {
+      const stored = localStorage.getItem(`fluencisPracticeMetrics_${user?.fullName || 'student'}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.totalPracticeMinutes ?? 0;
+      }
+    } catch {}
+    return 0;
+  })();
 
   const badges: BadgeItem[] = [
     {
@@ -202,7 +221,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigate }) => {
       iconBg: 'from-emerald-400 to-teal-600',
       textColor: 'text-emerald-300',
       glowColor: 'rgba(52, 211, 153, 0.35)',
-      description: 'Created and hosted a secure SpeakMate practice room using a unique Room ID.',
+      description: 'Created and hosted a secure Fluencis practice room using a unique Room ID.',
       requirement: 'Create and host 1 practice room session',
       progress: 1,
       maxProgress: 1,
@@ -256,7 +275,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigate }) => {
       iconBg: 'from-amber-500 to-yellow-600',
       textColor: 'text-amber-200',
       glowColor: 'rgba(245, 158, 11, 0.35)',
-      description: 'Logged 100+ minutes of live peer speaking practice on SpeakMate.',
+      description: 'Logged 100+ minutes of live peer speaking practice on Fluencis.',
       requirement: 'Accumulate 100 minutes of active stage speaking time',
       progress: Math.min(totalMinutes, 100),
       maxProgress: 100,
@@ -281,7 +300,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ onNavigate }) => {
   });
 
   const handleShareBadge = (badge: BadgeItem) => {
-    const text = `🏆 I just unlocked the "${badge.title}" badge on SpeakMate! ${badge.description} Level up your communication skills!`;
+    const text = `🏆 I just unlocked the "${badge.title}" badge on Fluencis! ${badge.description} Level up your communication skills!`;
     navigator.clipboard.writeText(text);
     setCopiedBadgeToast(true);
     setTimeout(() => setCopiedBadgeToast(false), 2500);

@@ -1,3 +1,11 @@
+export interface UserPracticeMetrics {
+  totalPracticeMinutes: number;
+  totalSessionsCount: number;
+  currentStreakDays: number;
+  lastPracticedDate?: string; // YYYY-MM-DD
+  historyDates?: string[];
+}
+
 export interface UserProfile {
   uid: string;
   fullName: string;
@@ -16,6 +24,7 @@ export interface UserProfile {
   profileCompleted?: boolean;
   availabilityStatus?: 'AVAILABLE' | 'BUSY' | 'OFFLINE';
   emailVerified?: boolean;
+  practiceMetrics?: UserPracticeMetrics;
 }
 
 export interface PublicProfile {

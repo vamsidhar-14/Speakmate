@@ -11,12 +11,13 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('speakMateTheme') as ThemeMode;
+    const saved = (localStorage.getItem('fluencisTheme') || localStorage.getItem('speakMateTheme')) as ThemeMode;
     return saved || 'dark';
   });
 
   const setTheme = (newTheme: ThemeMode) => {
     setThemeState(newTheme);
+    localStorage.setItem('fluencisTheme', newTheme);
     localStorage.setItem('speakMateTheme', newTheme);
   };
 

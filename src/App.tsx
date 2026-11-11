@@ -16,6 +16,7 @@ import { AICoachPage } from './pages/AICoachPage';
 import { ProgressPage } from './pages/ProgressPage';
 import { GlobalChatDrawer } from './components/GlobalChatDrawer';
 import { LiveAIChatbot } from './components/LiveAIChatbot';
+import { FluencisLogo } from './components/FluencisLogo';
 import { PracticeMode } from './types';
 import { MessageSquare, ShieldCheck, Sparkles, Zap } from 'lucide-react';
 
@@ -46,8 +47,12 @@ const MainApp: React.FC = () => {
         setCurrentTab('room');
       }
     };
+    window.addEventListener('fluencis:quick-match-found', handleQuickMatch);
     window.addEventListener('speakmate:quick-match-found', handleQuickMatch);
-    return () => window.removeEventListener('speakmate:quick-match-found', handleQuickMatch);
+    return () => {
+      window.removeEventListener('fluencis:quick-match-found', handleQuickMatch);
+      window.removeEventListener('speakmate:quick-match-found', handleQuickMatch);
+    };
   }, []);
 
   // Return to rooms dashboard if a room error occurs while in room
@@ -115,13 +120,13 @@ const MainApp: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#020b18] text-white space-y-5 relative selection:bg-[#20f5a2] selection:text-[#00131c]">
         <BackgroundEffects />
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#20f5a2] to-[#00cfff] flex items-center justify-center font-bold text-3xl text-[#00131c] animate-pulse shadow-[0_0_35px_rgba(32,245,162,0.5)] z-10">
-          S
+        <div className="z-10">
+          <FluencisLogo size={52} showText={false} />
         </div>
         <div className="text-center space-y-1.5 z-10">
           <div className="text-sm font-bold text-white tracking-wide uppercase flex items-center justify-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#20f5a2] animate-ping" />
-            <span>SpeakMate Authentication</span>
+            <span>Fluencis Authentication</span>
           </div>
           <p className="text-xs text-[#7c9cb0]">Connecting to Firebase Authentication &amp; Firestore...</p>
         </div>

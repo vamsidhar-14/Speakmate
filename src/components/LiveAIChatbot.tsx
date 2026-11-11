@@ -246,7 +246,7 @@ export const LiveAIChatbot: React.FC = () => {
 
   const [recentQuestions, setRecentQuestions] = useState<RecentQuestionItem[]>(() => {
     try {
-      const stored = localStorage.getItem('speakmate_recent_questions');
+      const stored = localStorage.getItem('fluencis_recent_questions') || localStorage.getItem('speakmate_recent_questions');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -293,6 +293,7 @@ export const LiveAIChatbot: React.FC = () => {
   const saveRecentQuestions = (list: RecentQuestionItem[]) => {
     setRecentQuestions(list);
     try {
+      localStorage.setItem('fluencis_recent_questions', JSON.stringify(list));
       localStorage.setItem('speakmate_recent_questions', JSON.stringify(list));
     } catch (e) {
       console.warn('Failed to save recent questions:', e);
@@ -366,7 +367,7 @@ export const LiveAIChatbot: React.FC = () => {
       {
         id: 'msg-welcome',
         role: 'model',
-        text: `### 🌟 Welcome to SpeakMate Universal Academic & Peer Mentor! 🎓
+        text: `### 🌟 Welcome to Fluencis Universal Academic & Peer Mentor! 🎓
 
 I support students across **ALL branches & disciplines** — Engineering, Physical/Life Sciences, Business, Economics, Humanities, Medicine, and Law! ✨
 
@@ -375,7 +376,7 @@ I support students across **ALL branches & disciplines** — Engineering, Physic
 • Supports zoom in/out, fullscreen inspection, code view, and instant SVG download for study notes.
 
 **🎙️ Male Voice Explanation (Charon - Articulate & Deep)**
-• Click **🎙️ Male Voice Explanation** on any answer to hear SpeakMate explain the topic aloud with Charon — an articulate, calm, clear, and authoritative male mentor voice!
+• Click **🎙️ Male Voice Explanation** on any answer to hear Fluencis explain the topic aloud with Charon — an articulate, calm, clear, and authoritative male mentor voice!
 • You can switch between **Charon (Articulate)**, **Fenrir (Deep)**, and **Zephyr (Smooth)** in the audio bar, adjust speed (1x, 1.25x, 1.5x), and toggle **Auto-Read Voice** mode.
 
 **🕒 Recent Questions History**
@@ -676,6 +677,7 @@ Ask any academic doubt or paste your answer for peer review below! 🚀`,
             return q;
           });
           try {
+            localStorage.setItem('fluencis_recent_questions', JSON.stringify(updated));
             localStorage.setItem('speakmate_recent_questions', JSON.stringify(updated));
           } catch (e) {
             console.warn('LocalStorage save notice:', e);
@@ -846,6 +848,7 @@ Ask any academic doubt or paste your answer for peer review below! 🚀`,
           );
           const updated = [newHistItem, ...filtered].slice(0, 30);
           try {
+            localStorage.setItem('fluencis_recent_questions', JSON.stringify(updated));
             localStorage.setItem('speakmate_recent_questions', JSON.stringify(updated));
           } catch (e) {
             console.warn('Failed to save to localStorage:', e);
@@ -893,6 +896,7 @@ When answering this topic in technical interviews, clarify the fundamental invar
           );
           const updated = [newHistItem, ...filtered].slice(0, 30);
           try {
+            localStorage.setItem('fluencis_recent_questions', JSON.stringify(updated));
             localStorage.setItem('speakmate_recent_questions', JSON.stringify(updated));
           } catch {}
           return updated;
@@ -931,7 +935,7 @@ A temporary network delay occurred while connecting to the assistant. Please pre
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          title="Ask SpeakMate Academic Assistant"
+          title="Ask Fluencis Academic Assistant"
           className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-[#20f5a2] to-[#00bfff] text-[#00131c] font-bold text-xs sm:text-sm shadow-[0_8px_30px_rgba(0,210,255,0.4)] hover:shadow-[0_12px_40px_rgba(32,245,162,0.6)] hover:scale-105 active:scale-95 transition-all cursor-pointer group"
         >
           <div className="relative">
@@ -956,7 +960,7 @@ A temporary network delay occurred while connecting to the assistant. Please pre
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-white">SpeakMate Academic &amp; Peer Mentor</h3>
+                  <h3 className="text-sm font-bold text-white">Fluencis Academic &amp; Peer Mentor</h3>
                   <span className="flex items-center gap-1 text-[9px] font-bold text-[#20f5a2] bg-[#20f5a2]/10 px-2 py-0.5 rounded-full border border-[#20f5a2]/20">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#20f5a2] animate-pulse" />
                     ALL BRANCHES
@@ -1116,7 +1120,7 @@ A temporary network delay occurred while connecting to the assistant. Please pre
               <button
                 type="button"
                 onClick={() => setAutoReadVoice(!autoReadVoice)}
-                title="When ON, SpeakMate will automatically speak voice explanations for each answer"
+                title="When ON, Fluencis will automatically speak voice explanations for each answer"
                 className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase transition-all cursor-pointer border ${
                   autoReadVoice
                     ? 'bg-[#20f5a2]/25 text-[#20f5a2] border-[#20f5a2]/50 shadow-[0_0_10px_rgba(32,245,162,0.4)]'
@@ -1334,7 +1338,7 @@ A temporary network delay occurred while connecting to the assistant. Please pre
                       <p className="text-[11px] text-[#7ea0b5] max-w-xs mx-auto mt-1">
                         {historySearchQuery
                           ? `No past explanations match "${historySearchQuery}". Try clearing search or asking a new question!`
-                          : 'Ask SpeakMate any conceptual doubt or peer review question. Your answers and voice explanations will be preserved here for rapid recall!'}
+                          : 'Ask Fluencis any conceptual doubt or peer review question. Your answers and voice explanations will be preserved here for rapid recall!'}
                       </p>
                     </div>
                     {historySearchQuery && (

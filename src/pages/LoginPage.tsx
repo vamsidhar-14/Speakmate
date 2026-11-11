@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff, ArrowRight, KeyRound, Mail, X, CheckCircle2, AlertCircle, Sparkles, User } from 'lucide-react';
-import { SpeakMateLogo } from '../components/SpeakMateLogo';
+import { FluencisLogo } from '../components/FluencisLogo';
 
 interface LoginPageProps {
   onNavigate: (tab: string) => void;
@@ -107,7 +107,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
     <div className="min-h-[calc(100vh-72px)] max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
       {/* Left intro column */}
       <div className="lg:col-span-6 space-y-6">
-        <SpeakMateLogo size={44} showText={true} textClassName="text-3xl" badgeText="Student Platform" />
+        <FluencisLogo size={44} showText={true} textClassName="text-3xl" badgeText="Student Platform" />
 
         <p className="text-xs font-bold tracking-[1.5px] text-[#20f5a2] uppercase">
           FIREBASE SECURE AUTHENTICATION

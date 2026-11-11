@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { ChatPanel } from '../components/ChatPanel';
 import { PostSessionFeedbackModal } from '../components/PostSessionFeedbackModal';
-import { SpeakMateLogo } from '../components/SpeakMateLogo';
+import { FluencisLogo } from '../components/FluencisLogo';
 import { PracticeMode } from '../types';
 import {
   Mic,
@@ -42,7 +42,7 @@ interface RoomPageProps {
 }
 
 export const RoomPage: React.FC<RoomPageProps> = ({ practiceMode = 'General Communication', onNavigate }) => {
-  const { user } = useAuth();
+  const { user, recordPracticeSession } = useAuth();
   const {
     socket,
     activeRoom,
@@ -96,6 +96,10 @@ export const RoomPage: React.FC<RoomPageProps> = ({ practiceMode = 'General Comm
   // Post-Room Feedback System
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
+  const [inRoomReceivedFeedback, setInRoomReceivedFeedback] = useState<any | null>(null);
+  const [hasNewFeedbackBadge, setHasNewFeedbackBadge] = useState(false);
+  const [showInRoomFeedbackModal, setShowInRoomFeedbackModal] = useState(false);
+  const [feedbackGivenToPartner, setFeedbackGivenToPartner] = useState(false);
 
   // Resolve current active room ID with robust fallback chain to custom ID
   const currentRoomId =
@@ -142,6 +146,79 @@ export const RoomPage: React.FC<RoomPageProps> = ({ practiceMode = 'General Comm
   const partnerName = partner?.name || 'Practice Partner';
   const participantCount = participants.length;
   const isRoomLocked = activeRoom?.locked || false;
+
+  const hadPartnerRef = useRef(false);
+  const lastPartnerNameRef = useRef('Practice Partner');
+  const [partnerLeftNotice, setPartnerLeftNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (remoteParticipants.length > 0) {
+      hadPartnerRef.current = true;
+      lastPartnerNameRef.current = remoteParticipants[0].name;
+    } else if (hadPartnerRef.current && seconds > 10) {
+      setPartnerLeftNotice(`${lastPartnerNameRef.current} has left the practice session. You can now complete their peer evaluation!`);
+    }
+  }, [remoteParticipants, seconds]);
+
+  // Real-Time In-Room Peer Feedback Listener
+  useEffect(() => {
+    const handleFeedbackEvent = (e: any) => {
+      const fb = e.detail;
+      if (fb) {
+        const to = (fb.toStudent || '').toLowerCase().trim();
+        const me = myName.toLowerCase().trim();
+        const meFirst = me.split(' ')[0] || me;
+        if (
+          fb.roomId === currentRoomId ||
+          to === me ||
+          to.includes(meFirst) ||
+          me.includes(to) ||
+          to === 'you' ||
+          to === 'student'
+        ) {
+          setInRoomReceivedFeedback(fb);
+          setHasNewFeedbackBadge(true);
+          setShowInRoomFeedbackModal(true);
+        }
+      }
+    };
+
+    window.addEventListener('fluencis:peer-feedback-received', handleFeedbackEvent);
+    window.addEventListener('speakmate:peer-feedback-received', handleFeedbackEvent);
+
+    if (socket) {
+      const onSocketFb = (fb: any) => {
+        if (fb) {
+          const to = (fb.toStudent || '').toLowerCase().trim();
+          const me = myName.toLowerCase().trim();
+          const meFirst = me.split(' ')[0] || me;
+          if (
+            fb.roomId === currentRoomId ||
+            to === me ||
+            to.includes(meFirst) ||
+            me.includes(to) ||
+            to === 'you' ||
+            to === 'student'
+          ) {
+            setInRoomReceivedFeedback(fb);
+            setHasNewFeedbackBadge(true);
+            setShowInRoomFeedbackModal(true);
+          }
+        }
+      };
+      socket.on('peer-feedback-received', onSocketFb);
+      return () => {
+        window.removeEventListener('fluencis:peer-feedback-received', handleFeedbackEvent);
+        window.removeEventListener('speakmate:peer-feedback-received', handleFeedbackEvent);
+        socket.off('peer-feedback-received', onSocketFb);
+      };
+    }
+
+    return () => {
+      window.removeEventListener('fluencis:peer-feedback-received', handleFeedbackEvent);
+      window.removeEventListener('speakmate:peer-feedback-received', handleFeedbackEvent);
+    };
+  }, [socket, currentRoomId, myName]);
 
   // Timer interval
   useEffect(() => {
@@ -653,38 +730,52 @@ export const RoomPage: React.FC<RoomPageProps> = ({ practiceMode = 'General Comm
     toggleHandRaise(next);
   };
 
-  const handleEndSession = () => {
+  const handleEndSession = async () => {
     if (localStream) localStream.getTracks().forEach((t) => t.stop());
     if (screenStream) screenStream.getTracks().forEach((t) => t.stop());
+    if (seconds >= 5) {
+      try { await recordPracticeSession(seconds); } catch {}
+    }
     setIsFeedbackModalOpen(true);
   };
 
-  const handleFeedbackComplete = () => {
+  const handleFeedbackComplete = async () => {
     setIsFeedbackModalOpen(false);
+    setFeedbackGivenToPartner(true);
+    if (localStream) localStream.getTracks().forEach((t) => t.stop());
+    if (screenStream) screenStream.getTracks().forEach((t) => t.stop());
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
+    }
+    if (seconds >= 5) {
+      try { await recordPracticeSession(seconds); } catch {}
     }
     if (isHost) {
       endConversation();
     } else {
       leaveRoom();
     }
-    onNavigate('progress');
+    onNavigate('dashboard');
   };
 
-  const handleFeedbackDismiss = () => {
+  const handleFeedbackDismiss = async () => {
     setIsFeedbackModalOpen(false);
+    if (localStream) localStream.getTracks().forEach((t) => t.stop());
+    if (screenStream) screenStream.getTracks().forEach((t) => t.stop());
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
+    }
+    if (seconds >= 5) {
+      try { await recordPracticeSession(seconds); } catch {}
     }
     if (isHost) {
       endConversation();
     } else {
       leaveRoom();
     }
-    onNavigate('progress');
+    onNavigate('dashboard');
   };
 
   const handleCopyRoomId = () => {
@@ -714,7 +805,7 @@ export const RoomPage: React.FC<RoomPageProps> = ({ practiceMode = 'General Comm
             <ArrowLeft className="w-4 h-4" />
           </button>
 
-          <SpeakMateLogo size={30} showText={false} />
+          <FluencisLogo size={30} showText={false} />
 
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#20f5a2] shadow-[0_0_10px_#20f5a2] animate-pulse" />
@@ -819,6 +910,34 @@ export const RoomPage: React.FC<RoomPageProps> = ({ practiceMode = 'General Comm
       <div className="flex-1 flex overflow-hidden relative">
         {/* Central Stage: Video Grid / Screen Share */}
         <main className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto relative space-y-4">
+          {/* Partner Left Notice / Review Prompt */}
+          {partnerLeftNotice && (
+            <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 backdrop-blur-xl shadow-xl flex items-center justify-between gap-3 text-xs text-amber-200 animate-in slide-in-from-top-2">
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>{partnerLeftNotice}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    setPartnerLeftNotice(null);
+                    setIsFeedbackModalOpen(true);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#00131c] font-bold text-xs shadow-md transition-all cursor-pointer"
+                >
+                  Rate Partner Now
+                </button>
+                <button
+                  onClick={() => setPartnerLeftNotice(null)}
+                  className="p-1 rounded-lg text-amber-300 hover:text-white"
+                  title="Dismiss notice"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Active Screen Share Window if Screen Sharing */}
           {isScreenSharing && (
             <div className="relative aspect-video max-h-[55vh] rounded-3xl overflow-hidden border-2 border-[#00cfff] bg-black shadow-2xl mx-auto w-full">
@@ -1110,7 +1229,7 @@ export const RoomPage: React.FC<RoomPageProps> = ({ practiceMode = 'General Comm
                       <strong>Method 1 (Direct link):</strong> Send them the copied link. When they open it, they will automatically join.
                     </p>
                     <p>
-                      <strong>Method 2 (Using Room ID):</strong> Tell them to open SpeakMate, click <strong className="text-white">Rooms</strong> in the top navigation, paste <strong className="text-[#20f5a2] font-mono">{currentRoomId}</strong> into the <strong className="text-white">Join by Room ID</strong> box, and click <strong className="text-white">Join Room</strong>.
+                      <strong>Method 2 (Using Room ID):</strong> Tell them to open Fluencis, click <strong className="text-white">Rooms</strong> in the top navigation, paste <strong className="text-[#20f5a2] font-mono">{currentRoomId}</strong> into the <strong className="text-white">Join by Room ID</strong> box, and click <strong className="text-white">Join Room</strong>.
                     </p>
                   </div>
                 </div>
@@ -1305,6 +1424,33 @@ export const RoomPage: React.FC<RoomPageProps> = ({ practiceMode = 'General Comm
             <Subtitles className="w-5 h-5" />
           </button>
 
+          {/* Peer Review & Real-Time Feedback Button */}
+          <button
+            onClick={() => {
+              setHasNewFeedbackBadge(false);
+              if (inRoomReceivedFeedback && !feedbackGivenToPartner) {
+                setShowInRoomFeedbackModal(true);
+              } else {
+                setIsFeedbackModalOpen(true);
+              }
+            }}
+            title="Leave peer review or view real-time feedback received"
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer relative ${
+              hasNewFeedbackBadge
+                ? 'bg-gradient-to-r from-[#20f5a2] to-[#00cfff] text-[#00131c] shadow-[0_0_20px_rgba(32,245,162,0.6)] animate-pulse'
+                : inRoomReceivedFeedback
+                ? 'bg-amber-400 text-[#00131c] shadow-[0_0_15px_rgba(251,191,36,0.4)]'
+                : 'bg-[#223547] hover:bg-[#2c445c] text-amber-300'
+            }`}
+          >
+            <Award className="w-5 h-5" />
+            {hasNewFeedbackBadge && (
+              <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-[#20f5a2] text-[#00131c] border border-white">
+                NEW!
+              </span>
+            )}
+          </button>
+
           {/* Red Teams End Call / Leave Meeting Button */}
           <button
             onClick={handleEndSession}
@@ -1352,7 +1498,7 @@ export const RoomPage: React.FC<RoomPageProps> = ({ practiceMode = 'General Comm
               </div>
               <div>
                 <h3 className="text-base font-bold text-white">Meeting Security & Privacy</h3>
-                <p className="text-xs text-[#8fa9bb]">SpeakMate Microsoft Teams Room Protection</p>
+                <p className="text-xs text-[#8fa9bb]">Fluencis Microsoft Teams Room Protection</p>
               </div>
             </div>
 
@@ -1414,38 +1560,189 @@ export const RoomPage: React.FC<RoomPageProps> = ({ practiceMode = 'General Comm
       {/* Leave Room Confirmation Dialog */}
       {isLeaveConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-3xl border border-[rgba(0,210,255,0.3)] bg-gradient-to-b from-[#09253d] to-[#020e1a] p-6 text-white shadow-2xl space-y-4">
+          <div className="w-full max-w-md rounded-3xl border border-[rgba(0,210,255,0.3)] bg-gradient-to-b from-[#09253d] to-[#020e1a] p-6 text-white shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
                 <ArrowLeft className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Leave Teams Meeting?</h3>
-                <p className="text-xs text-[#8ca8ba]">Your camera, audio, and screen session will end.</p>
+                <h3 className="text-base font-bold text-white">Leave Practice Session?</h3>
+                <p className="text-xs text-[#8ca8ba]">
+                  Practice time: <span className="text-[#20f5a2] font-mono font-bold">{formatTimer(seconds)}</span>
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2">
+            <p className="text-xs text-[#9eb5c6] leading-relaxed">
+              Exchanging peer reviews after practice updates your communication score, practice streak, and logged reviews in real time on your dashboard!
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setIsLeaveConfirmOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs text-[#8ca8ba] hover:text-white bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs text-[#8ca8ba] hover:text-white bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
               >
-                Stay in Meeting
+                Stay in Room
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   setIsLeaveConfirmOpen(false);
                   if (localStream) localStream.getTracks().forEach((track) => track.stop());
                   if (screenStream) screenStream.getTracks().forEach((track) => track.stop());
-                  leaveRoom();
-                  onNavigate('rooms');
+                  if (seconds >= 5) {
+                    try { await recordPracticeSession(seconds); } catch {}
+                  }
+                  setIsFeedbackModalOpen(true);
                 }}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-900/30 transition-all cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#20f5a2] to-[#00bfff] text-[#00131c] shadow-[0_0_15px_rgba(32,245,162,0.35)] transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
-                Leave Meeting
+                <Award className="w-3.5 h-3.5" />
+                <span>Rate Partner & Leave</span>
               </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsLeaveConfirmOpen(false);
+                  if (localStream) localStream.getTracks().forEach((track) => track.stop());
+                  if (screenStream) screenStream.getTracks().forEach((track) => track.stop());
+                  if (seconds >= 5) {
+                    try { await recordPracticeSession(seconds); } catch {}
+                  }
+                  leaveRoom();
+                  onNavigate('dashboard');
+                }}
+                className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+              >
+                Leave Without Review
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Real-Time In-Room Received Peer Review Modal */}
+      {showInRoomFeedbackModal && inRoomReceivedFeedback && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-lg rounded-3xl border border-[#20f5a2]/50 bg-gradient-to-br from-[rgba(5,35,55,0.96)] to-[rgba(2,15,30,0.98)] p-6 sm:p-8 shadow-[0_0_50px_rgba(32,245,162,0.25)] backdrop-blur-2xl text-white my-8">
+            <button
+              onClick={() => setShowInRoomFeedbackModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-xl text-[#7892a5] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#20f5a2] uppercase tracking-wider">
+                <Sparkles className="w-4 h-4 animate-spin" />
+                <span>REAL-TIME PEER REVIEW RECEIVED IN ROOM</span>
+              </div>
+
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#20f5a2] to-[#00bfff] flex items-center justify-center font-extrabold text-xl text-[#00131c] shadow-[0_0_20px_rgba(32,245,162,0.4)]">
+                  {inRoomReceivedFeedback.fromInitial || (inRoomReceivedFeedback.fromStudent ? inRoomReceivedFeedback.fromStudent.charAt(0).toUpperCase() : 'P')}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    {inRoomReceivedFeedback.fromStudent} evaluated your speaking!
+                  </h3>
+                  <p className="text-xs text-[#8ca8ba]">
+                    {inRoomReceivedFeedback.practiceMode} · Session duration: <span className="font-mono text-[#20f5a2]">{inRoomReceivedFeedback.durationFormatted}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Overall Score */}
+              <div className="p-4 rounded-2xl bg-[rgba(1,15,30,0.7)] border border-[rgba(0,210,255,0.2)] flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-[#718b9e] uppercase font-bold tracking-wider block">Communication Score</span>
+                  <div className="text-2xl font-extrabold text-[#20f5a2]">
+                    {(inRoomReceivedFeedback.ratings?.overall ? inRoomReceivedFeedback.ratings.overall * 2 : 10).toFixed(1)} <span className="text-xs text-[#8ca8ba] font-normal">/ 10</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-amber-400">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-5 h-5 ${
+                        i < (inRoomReceivedFeedback.ratings?.overall || 5)
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-[#31485c]'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Dimension ratings */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {[
+                  { label: 'Voice Clarity', val: inRoomReceivedFeedback.ratings?.clarity || 5 },
+                  { label: 'Confidence', val: inRoomReceivedFeedback.ratings?.confidence || 5 },
+                  { label: 'Listening & Response', val: inRoomReceivedFeedback.ratings?.listening || 5 },
+                  { label: 'Structure', val: inRoomReceivedFeedback.ratings?.structure || 5 },
+                ].map((dim, idx) => (
+                  <div key={idx} className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between">
+                    <span className="text-[#8ca8ba] text-[11px]">{dim.label}</span>
+                    <span className="font-bold text-white text-xs">{dim.val} / 5</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tags */}
+              {inRoomReceivedFeedback.tags && inRoomReceivedFeedback.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {inRoomReceivedFeedback.tags.map((tag: string, i: number) => (
+                    <span
+                      key={i}
+                      className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#20f5a2]/10 border border-[#20f5a2]/30 text-[#20f5a2]"
+                    >
+                      ✓ {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Constructive Notes */}
+              {inRoomReceivedFeedback.constructiveNotes && (
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-[#86a8bd]">Peer Feedback Observation:</div>
+                  <p className="text-xs text-[#dcebf5] italic leading-relaxed">
+                    &ldquo;{inRoomReceivedFeedback.constructiveNotes}&rdquo;
+                  </p>
+                </div>
+              )}
+
+              {/* Encouragement */}
+              {inRoomReceivedFeedback.encouragement && (
+                <div className="p-3.5 rounded-2xl bg-[#20f5a2]/10 border border-[#20f5a2]/25 space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-[#20f5a2]">Encouragement:</div>
+                  <p className="text-xs text-white font-medium leading-relaxed">
+                    &ldquo;{inRoomReceivedFeedback.encouragement}&rdquo;
+                  </p>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setShowInRoomFeedbackModal(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs text-[#8ca8ba] hover:text-white cursor-pointer"
+                >
+                  Continue Practice
+                </button>
+                <button
+                  onClick={() => {
+                    setShowInRoomFeedbackModal(false);
+                    setIsFeedbackModalOpen(true);
+                  }}
+                  className="px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-[#20f5a2] to-[#00bfff] text-[#00131c] shadow-[0_0_20px_rgba(32,245,162,0.4)] hover:scale-[1.02] transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Award className="w-4 h-4" />
+                  <span>Rate {inRoomReceivedFeedback.fromStudent} in Return</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

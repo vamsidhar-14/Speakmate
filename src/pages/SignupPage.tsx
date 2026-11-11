@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth, SignupPayload } from '../context/AuthContext';
 import { ArrowRight, CheckCircle2, AlertCircle, Eye, EyeOff, ShieldCheck, Mail } from 'lucide-react';
-import { SpeakMateLogo } from '../components/SpeakMateLogo';
+import { FluencisLogo } from '../components/FluencisLogo';
 
 interface SignupPageProps {
   onNavigate: (tab: string) => void;
@@ -132,7 +132,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
     <div className="min-h-[calc(100vh-72px)] max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
       {/* Left Column info */}
       <div className="lg:col-span-5 space-y-6">
-        <SpeakMateLogo size={44} showText={true} textClassName="text-3xl" badgeText="Student Platform" />
+        <FluencisLogo size={44} showText={true} textClassName="text-3xl" badgeText="Student Platform" />
 
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#20f5a2]/10 border border-[#20f5a2]/30 text-xs font-bold text-[#20f5a2]">
           <ShieldCheck className="w-3.5 h-3.5" />
@@ -177,7 +177,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
               <div className="space-y-2">
                 <h2 className="text-2xl font-extrabold text-white">Account Created Successfully!</h2>
                 <p className="text-xs text-[#9eb6c8] max-w-md mx-auto leading-relaxed">
-                  Welcome to SpeakMate, <strong className="text-white">{formData.fullName}</strong>. Your account is secured with Firebase and your profile has been initialized in Cloud Firestore.
+                  Welcome to Fluencis, <strong className="text-white">{formData.fullName}</strong>. Your account is secured with Firebase and your profile has been initialized in Cloud Firestore.
                 </p>
                 <div className="p-3 rounded-2xl bg-[rgba(0,210,255,0.08)] border border-[rgba(0,210,255,0.2)] text-xs text-[#00cfff] max-w-sm mx-auto flex items-center gap-2">
                   <Mail className="w-4 h-4 shrink-0 text-[#20f5a2]" />
@@ -200,7 +200,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-white mb-1">Create Student Account</h2>
                 <p className="text-xs text-[#8fa9bb]">
-                  Join SpeakMate with real Firebase Authentication &amp; Firestore.
+                  Join Fluencis with real Firebase Authentication &amp; Firestore.
                 </p>
               </div>
 

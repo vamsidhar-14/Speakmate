@@ -121,7 +121,7 @@ export const GlobalChatDrawer: React.FC<GlobalChatDrawerProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-[#71899b]">
-                {onlineStudents.length} student{onlineStudents.length === 1 ? '' : 's'} online across SpeakMate
+                {onlineStudents.length} student{onlineStudents.length === 1 ? '' : 's'} online across Fluencis
               </p>
             </div>
           </div>

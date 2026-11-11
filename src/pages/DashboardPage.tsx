@@ -18,6 +18,12 @@ import {
   Trash2,
   X,
   CheckCircle2,
+  Award,
+  Flame,
+  Clock,
+  TrendingUp,
+  Heart,
+  Star,
 } from 'lucide-react';
 import { PracticeMode, UserProfile } from '../types';
 
@@ -28,7 +34,7 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, onOpenChat }) => {
   const { user, isOwner, updateProfile, resendVerificationEmail, deleteAccount } = useAuth();
-  const { onlineStudents, peerFeedbacks, isConnected } = useSocket();
+  const { onlineStudents, peerFeedbacks, givenFeedbacks = [], isConnected } = useSocket();
 
   // Profile Edit State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -56,9 +62,71 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, onOpen
   const [deleteError, setDeleteError] = useState('');
   const [deleteSuccess, setDeleteSuccess] = useState(false);
 
-  const avgScore = peerFeedbacks.length > 0
-    ? ((peerFeedbacks.reduce((acc, f) => acc + (f.ratings?.overall || 4.5), 0) / peerFeedbacks.length) * 2).toFixed(1)
-    : '8.8';
+  // Real-Time Stats calculation from live socket feedback and real practice session metrics
+  const receivedCount = peerFeedbacks.length;
+  const givenCount = givenFeedbacks.length;
+  const totalReviewsCount = receivedCount + givenCount;
+
+  // Real communication score calculated dynamically from actual ratings received
+  const hasReceivedRatings = receivedCount > 0;
+  const avgOverallScore = hasReceivedRatings
+    ? ((peerFeedbacks.reduce((acc, f) => acc + (f.ratings?.overall || 5), 0) / receivedCount) * 2).toFixed(1)
+    : null;
+
+  // Real streak calculation from user.practiceMetrics (or synced localStorage fallback)
+  const realStreakDays = user?.practiceMetrics?.currentStreakDays ?? (() => {
+    try {
+      const stored = localStorage.getItem(`fluencisPracticeMetrics_${user?.fullName || 'student'}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.currentStreakDays ?? 0;
+      }
+    } catch {}
+    return 0;
+  })();
+
+  // Real practice time in minutes from user.practiceMetrics (or synced localStorage fallback)
+  const realPracticeMinutes = user?.practiceMetrics?.totalPracticeMinutes ?? (() => {
+    try {
+      const stored = localStorage.getItem(`fluencisPracticeMetrics_${user?.fullName || 'student'}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.totalPracticeMinutes ?? 0;
+      }
+    } catch {}
+    return 0;
+  })();
+
+  const realSessionsCount = user?.practiceMetrics?.totalSessionsCount ?? (() => {
+    try {
+      const stored = localStorage.getItem(`fluencisPracticeMetrics_${user?.fullName || 'student'}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.totalSessionsCount ?? 0;
+      }
+    } catch {}
+    return 0;
+  })();
+
+  const formattedPracticeTime = realPracticeMinutes >= 60
+    ? `${Math.floor(realPracticeMinutes / 60)}h ${realPracticeMinutes % 60}m`
+    : `${realPracticeMinutes} min`;
+
+  // Filter state for Real Peer Reviews Section on Dashboard
+  const [feedbackTab, setFeedbackTab] = useState<'all' | 'received' | 'given'>('all');
+
+  const allReviews = [
+    ...peerFeedbacks.map((f) => ({ ...f, reviewType: 'received' as const })),
+    ...givenFeedbacks
+      .filter((gf) => !peerFeedbacks.some((pf) => pf.id === gf.id))
+      .map((f) => ({ ...f, reviewType: 'given' as const })),
+  ];
+
+  const displayedReviews = feedbackTab === 'received'
+    ? allReviews.filter((r) => r.reviewType === 'received')
+    : feedbackTab === 'given'
+    ? allReviews.filter((r) => r.reviewType === 'given')
+    : allReviews;
 
   const modes: { title: PracticeMode; icon: string; desc: string }[] = [
     { title: 'General Communication', icon: '🎤', desc: 'Improve everyday fluency and voice projection' },
@@ -193,21 +261,51 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, onOpen
       {/* Quick Stats Grid */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: '◉', label: 'Peer Reviews Logged', val: `${peerFeedbacks.length}` },
-          { icon: '↗', label: 'Communication Score', val: `${avgScore} / 10` },
-          { icon: '◇', label: 'Current Streak', val: '4 days' },
-          { icon: '◎', label: 'Practice Time', val: `${peerFeedbacks.length * 15 + 20} min` },
+          {
+            icon: <Award className="w-5 h-5 text-[#20f5a2]" />,
+            label: 'Peer Reviews Logged',
+            val: `${totalReviewsCount}`,
+            sub: `${receivedCount} received · ${givenCount} given`,
+            indicator: isConnected ? '● Live synced' : 'Cached',
+          },
+          {
+            icon: <TrendingUp className="w-5 h-5 text-[#00cfff]" />,
+            label: 'Communication Score',
+            val: avgOverallScore ? `${avgOverallScore} / 10` : '-- / 10',
+            sub: avgOverallScore ? 'Real-time peer evaluation' : 'Awaiting 1st peer review',
+            indicator: hasReceivedRatings ? 'Active' : 'Pending',
+          },
+          {
+            icon: <Flame className="w-5 h-5 text-amber-400" />,
+            label: 'Current Streak',
+            val: `${realStreakDays} day${realStreakDays === 1 ? '' : 's'}`,
+            sub: realStreakDays > 0 ? '🔥 Active practice streak' : 'Practice today to begin',
+            indicator: realStreakDays > 0 ? 'Consistent' : 'Start now',
+          },
+          {
+            icon: <Clock className="w-5 h-5 text-[#20f5a2]" />,
+            label: 'Practice Time',
+            val: formattedPracticeTime,
+            sub: `${realSessionsCount} live session${realSessionsCount === 1 ? '' : 's'} recorded`,
+            indicator: realPracticeMinutes > 0 ? 'Stage speaking' : '0 sessions',
+          },
         ].map((stat, idx) => (
           <div
             key={idx}
-            className="p-5 rounded-2xl border border-[rgba(0,190,255,0.2)] bg-gradient-to-br from-[rgba(8,48,70,0.55)] to-[rgba(2,15,30,0.8)] backdrop-blur-md flex items-center gap-4 hover:border-[rgba(32,245,162,0.5)] hover:translate-y-[-2px] transition-all"
+            className="p-5 rounded-2xl border border-[rgba(0,190,255,0.2)] bg-gradient-to-br from-[rgba(8,48,70,0.55)] to-[rgba(2,15,30,0.8)] backdrop-blur-md flex flex-col justify-between gap-3 hover:border-[rgba(32,245,162,0.5)] hover:translate-y-[-2px] transition-all group"
           >
-            <div className="w-11 h-11 rounded-xl bg-[rgba(0,210,255,0.08)] border border-[rgba(0,210,255,0.2)] flex items-center justify-center text-xl text-[#20f5a2] shrink-0 font-mono">
-              {stat.icon}
+            <div className="flex items-center justify-between">
+              <div className="w-11 h-11 rounded-xl bg-[rgba(0,210,255,0.08)] border border-[rgba(0,210,255,0.2)] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                {stat.icon}
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[#8aa4b7]">
+                {stat.indicator}
+              </span>
             </div>
             <div>
-              <div className="text-[11px] text-[#718b9e]">{stat.label}</div>
-              <div className="text-lg font-bold text-white tracking-tight">{stat.val}</div>
+              <div className="text-[11px] text-[#718b9e] font-medium">{stat.label}</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-white tracking-tight mt-0.5">{stat.val}</div>
+              <div className="text-[10px] text-[#20f5a2]/80 mt-1 truncate">{stat.sub}</div>
             </div>
           </div>
         ))}
@@ -543,6 +641,188 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, onOpen
         )}
       </section>
 
+      {/* Real-Time Peer Reviews & Live Feedback Section */}
+      <section className="p-7 sm:p-8 rounded-3xl border border-[rgba(0,190,255,0.22)] bg-gradient-to-br from-[rgba(8,48,70,0.48)] to-[rgba(2,15,30,0.85)] backdrop-blur-xl space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#20f5a2] animate-pulse" />
+              <p className="text-[11px] font-bold tracking-[1.5px] text-[#20f5a2] uppercase">
+                REAL-TIME PEER REVIEWS &amp; RATINGS
+              </p>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#20f5a2]/10 border border-[#20f5a2]/30 text-[#20f5a2] font-semibold">
+                Live Synced with Rooms
+              </span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">Live Feedback Exchanged After Practice</h2>
+            <p className="text-xs text-[#86a2b5]">
+              Real constructive observations and encouragement logged by your peers in live practice rooms.
+            </p>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[rgba(1,15,30,0.7)] border border-[rgba(0,210,255,0.2)] shrink-0 self-start md:self-auto">
+            <button
+              onClick={() => setFeedbackTab('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                feedbackTab === 'all'
+                  ? 'bg-gradient-to-r from-[#20f5a2] to-[#00bfff] text-[#00131c] shadow-[0_0_12px_rgba(32,245,162,0.35)]'
+                  : 'text-[#8ba4b6] hover:text-white'
+              }`}
+            >
+              All Reviews ({allReviews.length})
+            </button>
+            <button
+              onClick={() => setFeedbackTab('received')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                feedbackTab === 'received'
+                  ? 'bg-gradient-to-r from-[#20f5a2] to-[#00bfff] text-[#00131c] shadow-[0_0_12px_rgba(32,245,162,0.35)]'
+                  : 'text-[#8ba4b6] hover:text-white'
+              }`}
+            >
+              Received ({receivedCount})
+            </button>
+            <button
+              onClick={() => setFeedbackTab('given')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                feedbackTab === 'given'
+                  ? 'bg-gradient-to-r from-[#20f5a2] to-[#00bfff] text-[#00131c] shadow-[0_0_12px_rgba(32,245,162,0.35)]'
+                  : 'text-[#8ba4b6] hover:text-white'
+              }`}
+            >
+              Given by You ({givenCount})
+            </button>
+          </div>
+        </div>
+
+        {/* Reviews Grid */}
+        {displayedReviews.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {displayedReviews.map((fb) => (
+              <div
+                key={fb.id}
+                className="p-5 rounded-2xl border border-[rgba(0,210,255,0.18)] bg-[rgba(1,15,30,0.65)] hover:border-[rgba(32,245,162,0.45)] transition-all space-y-3.5 relative group"
+              >
+                {/* Header row */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#20f5a2] to-[#00aaff] flex items-center justify-center font-extrabold text-sm text-[#00131c] shrink-0 shadow-[0_0_15px_rgba(32,245,162,0.3)]">
+                      {fb.reviewType === 'received'
+                        ? (fb.fromInitial || (fb.fromStudent ? fb.fromStudent.charAt(0).toUpperCase() : 'P'))
+                        : (fb.toInitial || (fb.toStudent ? fb.toStudent.charAt(0).toUpperCase() : 'P'))}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-bold text-white">
+                          {fb.reviewType === 'received' ? `From: ${fb.fromStudent}` : `To: ${fb.toStudent}`}
+                        </h4>
+                        <span
+                          className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                            fb.reviewType === 'received'
+                              ? 'bg-[#20f5a2]/15 text-[#20f5a2] border border-[#20f5a2]/30'
+                              : 'bg-[#00cfff]/15 text-[#00cfff] border border-[#00cfff]/30'
+                          }`}
+                        >
+                          {fb.reviewType === 'received' ? 'Received Evaluation' : 'Given by You'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[#7892a4] mt-0.5">
+                        {fb.practiceMode} · <span className="font-mono text-[#20f5a2]">{fb.durationFormatted}</span> · {fb.createdAt || 'Recent'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Overall Star Badge */}
+                  <div className="text-right shrink-0">
+                    <div className="flex items-center gap-1 text-amber-400">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-3.5 h-3.5 ${
+                            i < (fb.ratings?.overall || 5)
+                              ? 'fill-amber-400 text-amber-400'
+                              : 'text-[#2a4052]'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <div className="text-[10px] text-[#20f5a2] font-mono font-bold mt-0.5">
+                      {(fb.ratings?.overall ? fb.ratings.overall * 2 : 10).toFixed(1)} / 10
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dimension mini ratings */}
+                <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                  <div className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+                    <div className="text-[#6d889b]">Clarity</div>
+                    <div className="font-bold text-white">{fb.ratings?.clarity ?? 5}/5</div>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+                    <div className="text-[#6d889b]">Confidence</div>
+                    <div className="font-bold text-white">{fb.ratings?.confidence ?? 5}/5</div>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+                    <div className="text-[#6d889b]">Listening</div>
+                    <div className="font-bold text-white">{fb.ratings?.listening ?? 5}/5</div>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+                    <div className="text-[#6d889b]">Structure</div>
+                    <div className="font-bold text-white">{fb.ratings?.structure ?? 5}/5</div>
+                  </div>
+                </div>
+
+                {/* Tags */}
+                {fb.tags && fb.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {fb.tags.map((t, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-[#20f5a2]/10 border border-[#20f5a2]/20 text-[#20f5a2]"
+                      >
+                        ✓ {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Constructive Notes */}
+                {fb.constructiveNotes && (
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-[#cfe0ec] leading-relaxed italic">
+                    &ldquo;{fb.constructiveNotes}&rdquo;
+                  </div>
+                )}
+
+                {/* Encouragement Note */}
+                {fb.encouragement && (
+                  <div className="p-2.5 rounded-xl bg-[#20f5a2]/10 border border-[#20f5a2]/20 text-xs text-[#d8fced] flex items-start gap-2">
+                    <Heart className="w-3.5 h-3.5 text-[#20f5a2] shrink-0 mt-0.5" />
+                    <span>{fb.encouragement}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 text-center rounded-2xl border border-dashed border-[rgba(0,190,255,0.25)] bg-[rgba(0,20,35,0.4)] space-y-3">
+            <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center text-xl text-[#20f5a2] border border-[rgba(32,245,162,0.3)] bg-[rgba(32,245,162,0.08)]">
+              <Award className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-bold text-white">No peer reviews in this filter yet</h3>
+            <p className="text-xs text-[#718b9e] max-w-md mx-auto">
+              Join a practice room and speak with another student to exchange real peer evaluations. Your scores and reviews will appear here immediately after your session!
+            </p>
+            <button
+              onClick={() => onNavigate('practice', 'General Communication')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs text-[#00131c] bg-gradient-to-r from-[#20f5a2] to-[#00aaff] shadow-[0_6px_20px_rgba(0,190,255,0.25)] hover:translate-y-[-1px] transition-all cursor-pointer"
+            >
+              <Award className="w-4 h-4" />
+              <span>Start Practice to Earn Peer Reviews</span>
+            </button>
+          </div>
+        )}
+      </section>
+
       {/* Daily Practice Challenge with Voice Waves */}
       <section className="p-8 rounded-3xl border border-[rgba(32,245,162,0.2)] bg-[radial-gradient(circle_at_75%_50%,rgba(0,190,255,0.12),transparent_40%),linear-gradient(135deg,rgba(8,55,65,0.55),rgba(2,15,30,0.9))] flex flex-col md:flex-row items-center justify-between gap-8">
         <div className="space-y-3 max-w-xl">
@@ -592,7 +872,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate, onOpen
                 <AlertTriangle className="w-4 h-4" />
                 <span>DANGER ZONE: ACCOUNT DELETION</span>
               </div>
-              <h3 className="text-xl font-bold text-white">Delete SpeakMate Account</h3>
+              <h3 className="text-xl font-bold text-white">Delete Fluencis Account</h3>
               <p className="text-xs text-[#a0a8b0] leading-relaxed">
                 This will permanently delete your authentication record and all associated private profile data from Cloud Firestore. This action cannot be reversed.
               </p>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRight, Mic, Users, Briefcase, Sparkles, MessageSquare, TrendingUp, CheckCircle2 } from 'lucide-react';
-import { SpeakMateLogo } from '../components/SpeakMateLogo';
+import { FluencisLogo } from '../components/FluencisLogo';
 
 interface LandingPageProps {
   onNavigate: (tab: string) => void;
@@ -20,7 +20,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
           {/* Left Hero Content */}
           <div className="lg:col-span-7 space-y-6">
             <div className="mb-2">
-              <SpeakMateLogo size={42} showText={true} textClassName="text-3xl" badgeText="Student Platform" />
+              <FluencisLogo size={42} showText={true} textClassName="text-3xl" badgeText="Student Platform" />
             </div>
 
             <p className="text-xs font-bold tracking-[2px] text-[#20f5a2] uppercase">
@@ -169,19 +169,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* ================= ABOUT SPEAKMATE ================= */}
+      {/* ================= ABOUT FLUENCIS ================= */}
       <section id="about" className="py-20 px-6 sm:px-12 lg:px-24 bg-[#020b18] border-t border-[rgba(0,200,255,0.1)]">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-5 space-y-4">
             <p className="text-xs font-bold tracking-[2px] text-[#22f5a4] uppercase">
-              ABOUT SPEAKMATE
+              ABOUT FLUENCIS
             </p>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight">
               Not another social media platform.
             </h2>
             <p className="text-sm text-[#a9bfd1] leading-relaxed">
-              SpeakMate is built exclusively for students who want to bridge the gap between classroom theory and real-world speaking.
-              Whether preparing for corporate campus placements, tech team standups, or international debates, SpeakMate turns speaking into an active daily habit.
+              Fluencis is built exclusively for students who want to bridge the gap between classroom theory and real-world speaking.
+              Whether preparing for corporate campus placements, tech team standups, or international debates, Fluencis turns speaking into an active daily habit.
             </p>
           </div>
 
@@ -231,7 +231,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
               onClick={() => onNavigate('signup')}
               className="inline-flex items-center gap-3 px-8 py-4 rounded-full font-bold text-sm sm:text-base text-[#00131c] bg-gradient-to-r from-[#20f5a2] to-[#00aaff] shadow-[0_8px_30px_rgba(0,190,255,0.3)] hover:shadow-[0_12px_40px_rgba(0,230,210,0.45)] hover:translate-y-[-2px] transition-all cursor-pointer"
             >
-              <span>Join SpeakMate</span>
+              <span>Join Fluencis</span>
               <ArrowRight className="w-5 h-5" />
             </button>
           </div>

@@ -20,6 +20,7 @@ interface SocketContextType {
   clearLatestMatchData: () => void;
   incomingMatchInvite: { fromSocketId: string; fromName: string; fromLevel: string; mode: string } | null;
   peerFeedbacks: PeerFeedback[];
+  givenFeedbacks: PeerFeedback[];
   roomError: string | null;
   clearRoomError: () => void;
   createRoom: (type: 'public' | 'private', mode: string, capacity: number, customId?: string) => void;
@@ -57,7 +58,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [onlineStudents, setOnlineStudents] = useState<OnlineStudent[]>([]);
   const [activeRoom, setActiveRoom] = useState<RoomData | null>(() => {
     try {
-      const stored = localStorage.getItem('speakMateActiveRoom');
+      const stored = localStorage.getItem('fluencisActiveRoom') || localStorage.getItem('speakMateActiveRoom');
       return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
@@ -93,12 +94,34 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [handRaisedUsers, setHandRaisedUsers] = useState<{ [socketId: string]: boolean }>({});
   const [peerFeedbacks, setPeerFeedbacks] = useState<PeerFeedback[]>(() => {
     try {
-      const stored = localStorage.getItem('speakMatePeerFeedbacks');
+      const stored = localStorage.getItem('fluencisPeerFeedbacks') || localStorage.getItem('speakMatePeerFeedbacks');
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
     }
   });
+  const [givenFeedbacks, setGivenFeedbacks] = useState<PeerFeedback[]>(() => {
+    try {
+      const stored = localStorage.getItem('fluencisGivenFeedbacks') || localStorage.getItem('speakMateGivenFeedbacks');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const persistActiveRoom = (room: RoomData | null) => {
+    if (room) {
+      try {
+        localStorage.setItem('fluencisActiveRoom', JSON.stringify(room));
+        localStorage.setItem('speakMateActiveRoom', JSON.stringify(room));
+      } catch {}
+    } else {
+      try {
+        localStorage.removeItem('fluencisActiveRoom');
+        localStorage.removeItem('speakMateActiveRoom');
+      } catch {}
+    }
+  };
 
   const userRef = useRef(user);
   userRef.current = user;
@@ -114,7 +137,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const data = await res.json();
         if (Array.isArray(data.received)) {
           setPeerFeedbacks(data.received);
+          localStorage.setItem('fluencisPeerFeedbacks', JSON.stringify(data.received));
           localStorage.setItem('speakMatePeerFeedbacks', JSON.stringify(data.received));
+        }
+        if (Array.isArray(data.given)) {
+          setGivenFeedbacks(data.given);
         }
       }
     } catch (err) {
@@ -208,15 +235,20 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socketInstance.on('peer-feedback-received', (fb: PeerFeedback) => {
       setPeerFeedbacks((prev) => {
         const updated = [fb, ...prev.filter((f) => f.id !== fb.id)];
-        localStorage.setItem('speakMatePeerFeedbacks', JSON.stringify(updated));
+        try {
+          localStorage.setItem('fluencisPeerFeedbacks', JSON.stringify(updated));
+          localStorage.setItem('speakMatePeerFeedbacks', JSON.stringify(updated));
+        } catch {}
         return updated;
       });
+      window.dispatchEvent(new CustomEvent('fluencis:peer-feedback-received', { detail: fb }));
+      window.dispatchEvent(new CustomEvent('speakmate:peer-feedback-received', { detail: fb }));
     });
 
     socketInstance.on('room-created', (room: RoomData) => {
       setActiveRoom(room);
       setChatMessages(room.chatMessages || []);
-      localStorage.setItem('speakMateActiveRoom', JSON.stringify(room));
+      persistActiveRoom(room);
     });
 
     socketInstance.on('room-state', (room: RoomData) => {
@@ -224,7 +256,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (room.chatMessages) {
         setChatMessages(room.chatMessages);
       }
-      localStorage.setItem('speakMateActiveRoom', JSON.stringify(room));
+      persistActiveRoom(room);
     });
 
     socketInstance.on('room-joined', (room: RoomData) => {
@@ -232,7 +264,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (room.chatMessages) {
         setChatMessages(room.chatMessages);
       }
-      localStorage.setItem('speakMateActiveRoom', JSON.stringify(room));
+      persistActiveRoom(room);
       sessionStorage.setItem('currentPracticeRoomId', room.id);
     });
 
@@ -254,7 +286,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           ...prev,
           participants: [...prev.participants, newPart],
         };
-        localStorage.setItem('speakMateActiveRoom', JSON.stringify(updated));
+        persistActiveRoom(updated);
         return updated;
       });
     });
@@ -267,7 +299,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           ...prev,
           participants: filtered,
         };
-        localStorage.setItem('speakMateActiveRoom', JSON.stringify(updated));
+        persistActiveRoom(updated);
         return updated;
       });
     });
@@ -288,7 +320,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             return p;
           }),
         };
-        localStorage.setItem('speakMateActiveRoom', JSON.stringify(updated));
+        persistActiveRoom(updated);
         return updated;
       });
     });
@@ -305,8 +337,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (data.room.chatMessages) {
         setChatMessages(data.room.chatMessages);
       }
-      localStorage.setItem('speakMateActiveRoom', JSON.stringify(data.room));
+      persistActiveRoom(data.room);
       sessionStorage.setItem('currentPracticeRoomId', data.roomId);
+      window.dispatchEvent(new CustomEvent('fluencis:quick-match-found', { detail: data }));
       window.dispatchEvent(new CustomEvent('speakmate:quick-match-found', { detail: data }));
     });
 
@@ -331,7 +364,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socketInstance.on('room-error', (err: { message: string }) => {
       setRoomError(err.message || 'Room error occurred');
       sessionStorage.removeItem('currentPracticeRoomId');
-      localStorage.removeItem('speakMateActiveRoom');
+      persistActiveRoom(null);
       setActiveRoom(null);
       setIsSearchingMatch(false);
       setSearchStatus(null);
@@ -353,7 +386,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     socketInstance.on('kicked-from-room', (data: { message: string }) => {
       setActiveRoom(null);
-      localStorage.removeItem('speakMateActiveRoom');
+      persistActiveRoom(null);
       sessionStorage.removeItem('currentPracticeRoomId');
       setLatestMatchData(null);
       setRoomError(data.message || 'You were removed from the room by the host.');
@@ -405,7 +438,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     setActiveRoom(newRoom);
-    localStorage.setItem('speakMateActiveRoom', JSON.stringify(newRoom));
+    persistActiveRoom(newRoom);
     sessionStorage.setItem('currentPracticeRoomId', roomId);
 
     // Call REST endpoint immediately
@@ -458,7 +491,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             ],
       };
       setActiveRoom(roomWithMe);
-      localStorage.setItem('speakMateActiveRoom', JSON.stringify(roomWithMe));
+      persistActiveRoom(roomWithMe);
     }
 
     if (socket) {
@@ -498,7 +531,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               participants: updatedParticipants,
               chatMessages: prev?.chatMessages && prev.chatMessages.length > 0 ? prev.chatMessages : serverRoom.chatMessages || [],
             };
-            localStorage.setItem('speakMateActiveRoom', JSON.stringify(merged));
+            persistActiveRoom(merged);
             return merged;
           });
         }
@@ -582,7 +615,26 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (res.ok) {
         const data = await res.json();
         const saved = data.feedback || feedback;
-        setPeerFeedbacks((prev) => [saved, ...prev.filter((f) => f.id !== saved.id)]);
+        setGivenFeedbacks((prev) => {
+          const updated = [saved, ...prev.filter((f) => f.id !== saved.id)];
+          try { localStorage.setItem('fluencisGivenFeedbacks', JSON.stringify(updated)); } catch {}
+          return updated;
+        });
+
+        const myName = (user?.fullName || '').toLowerCase().trim();
+        const myFirst = myName.split(' ')[0] || myName;
+        const toName = (saved.toStudent || '').toLowerCase().trim();
+
+        if (toName === myName || toName.includes(myFirst) || myName.includes(toName) || toName === 'you' || toName === 'student') {
+          setPeerFeedbacks((prev) => {
+            const updated = [saved, ...prev.filter((f) => f.id !== saved.id)];
+            try {
+              localStorage.setItem('fluencisPeerFeedbacks', JSON.stringify(updated));
+              localStorage.setItem('speakMatePeerFeedbacks', JSON.stringify(updated));
+            } catch {}
+            return updated;
+          });
+        }
         return { success: true, feedback: saved };
       }
       return { success: true, feedback };
@@ -603,14 +655,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       setActiveRoom(null);
       setChatMessages([]);
-      localStorage.removeItem('speakMateActiveRoom');
+      persistActiveRoom(null);
       sessionStorage.removeItem('currentPracticeRoomId');
       setLatestMatchData(null);
       setIsSearchingMatch(false);
       setSearchStatus(null);
     } else {
       sessionStorage.removeItem('currentPracticeRoomId');
-      localStorage.removeItem('speakMateActiveRoom');
+      persistActiveRoom(null);
       setLatestMatchData(null);
     }
   };
@@ -769,6 +821,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clearLatestMatchData,
         incomingMatchInvite,
         peerFeedbacks,
+        givenFeedbacks,
         roomError,
         clearRoomError,
         createRoom,

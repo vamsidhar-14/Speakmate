@@ -22,7 +22,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
-import { UserProfile, PublicProfile } from '../types';
+import { UserProfile, PublicProfile, UserPracticeMetrics } from '../types';
 import { handleFirestoreError, OperationType } from '../firebase/error';
 
 export const OWNER_EMAIL = 'amireddysrinivas1978@gmail.com';
@@ -58,6 +58,7 @@ interface AuthContextType {
   resendVerificationEmail: () => Promise<{ success: boolean; message?: string; error?: string }>;
   deleteAccount: (password: string) => Promise<{ success: boolean; error?: string }>;
   loginAsGuest: (guestName?: string) => Promise<{ success: boolean; error?: string }>;
+  recordPracticeSession: (durationSeconds: number) => Promise<UserPracticeMetrics>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -93,8 +94,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userDocSnap = await getDoc(userDocRef);
       if (userDocSnap.exists()) {
         const data = userDocSnap.data() as UserProfile;
+        const storedMetrics = (() => {
+          try {
+            const m = localStorage.getItem(`fluencisPracticeMetrics_${data.fullName || uid}`);
+            return m ? JSON.parse(m) : null;
+          } catch { return null; }
+        })();
         const profile: UserProfile = {
           ...data,
+          practiceMetrics: data.practiceMetrics || storedMetrics || {
+            totalPracticeMinutes: 0,
+            totalSessionsCount: 0,
+            currentStreakDays: 0,
+          },
           uid,
           email: safeEmail || data.email,
           emailVerified: currentFirebaseUser.emailVerified,
@@ -211,7 +223,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } else {
         try {
-          const storedGuest = localStorage.getItem('speakMateGuestUser');
+          const storedGuest = localStorage.getItem('fluencisGuestUser') || localStorage.getItem('speakMateGuestUser');
           if (storedGuest) {
             setUser(JSON.parse(storedGuest));
           } else {
@@ -415,10 +427,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const cleanName = (guestName || '').trim() || `Student ${Math.floor(100 + Math.random() * 900)}`;
       const guestUid = `guest-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const guestMetrics = (() => {
+        try {
+          const m = localStorage.getItem(`fluencisPracticeMetrics_${cleanName}`);
+          return m ? JSON.parse(m) : { totalPracticeMinutes: 0, totalSessionsCount: 0, currentStreakDays: 0 };
+        } catch {
+          return { totalPracticeMinutes: 0, totalSessionsCount: 0, currentStreakDays: 0 };
+        }
+      })();
+
       const guestProfile: UserProfile = {
         uid: guestUid,
         fullName: cleanName,
-        email: `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.speakmate.app`,
+        email: `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.fluencis.app`,
         role: 'student',
         course: 'B.Tech',
         branch: 'CSE',
@@ -432,8 +453,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profileCompleted: true,
         availabilityStatus: 'AVAILABLE',
         emailVerified: true,
+        practiceMetrics: guestMetrics,
       };
       setUser(guestProfile);
+      localStorage.setItem('fluencisGuestUser', JSON.stringify(guestProfile));
       localStorage.setItem('speakMateGuestUser', JSON.stringify(guestProfile));
       return { success: true };
     } catch (err: any) {
@@ -441,14 +464,104 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Record practice session duration and update streak in real time
+  const recordPracticeSession = async (durationSeconds: number): Promise<UserPracticeMetrics> => {
+    if (durationSeconds < 5) {
+      return (
+        user?.practiceMetrics || {
+          totalPracticeMinutes: 0,
+          totalSessionsCount: 0,
+          currentStreakDays: 0,
+        }
+      );
+    }
+
+    const minutes = Math.max(1, Math.round(durationSeconds / 60));
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterday = yesterdayDate.toISOString().split('T')[0];
+
+    const storageKey = `fluencisPracticeMetrics_${user?.fullName || 'student'}`;
+    let baseMetrics: UserPracticeMetrics = user?.practiceMetrics || {
+      totalPracticeMinutes: 0,
+      totalSessionsCount: 0,
+      currentStreakDays: 0,
+      lastPracticedDate: '',
+      historyDates: [],
+    };
+
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.totalPracticeMinutes > baseMetrics.totalPracticeMinutes) {
+          baseMetrics = parsed;
+        }
+      }
+    } catch {}
+
+    let streak = baseMetrics.currentStreakDays || 0;
+    if (baseMetrics.lastPracticedDate === today) {
+      if (streak === 0) streak = 1;
+    } else if (baseMetrics.lastPracticedDate === yesterday) {
+      streak += 1;
+    } else {
+      streak = 1;
+    }
+
+    const history = Array.from(new Set([...(baseMetrics.historyDates || []), today]));
+
+    const updatedMetrics: UserPracticeMetrics = {
+      totalPracticeMinutes: (baseMetrics.totalPracticeMinutes || 0) + minutes,
+      totalSessionsCount: (baseMetrics.totalSessionsCount || 0) + 1,
+      currentStreakDays: streak,
+      lastPracticedDate: today,
+      historyDates: history,
+    };
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(updatedMetrics));
+    } catch {}
+
+    if (user) {
+      const updatedUser: UserProfile = {
+        ...user,
+        practiceMetrics: updatedMetrics,
+      };
+      setUser(updatedUser);
+
+      if (auth.currentUser) {
+        try {
+          const userDocRef = doc(db, 'users', auth.currentUser.uid);
+          await updateDoc(userDocRef, {
+            practiceMetrics: updatedMetrics,
+            updatedAt: new Date().toISOString(),
+          });
+        } catch (e) {
+          console.warn('Could not update practiceMetrics in Firestore:', e);
+        }
+      } else {
+        try {
+          localStorage.setItem('fluencisGuestUser', JSON.stringify(updatedUser));
+        } catch {}
+      }
+    }
+
+    return updatedMetrics;
+  };
+
   // Real Firebase Logout
   const logout = async () => {
     try {
+      localStorage.removeItem('fluencisGuestUser');
       localStorage.removeItem('speakMateGuestUser');
       await signOut(auth);
       setUser(null);
       setFirebaseUser(null);
     } catch (err: any) {
+      localStorage.removeItem('fluencisGuestUser');
       localStorage.removeItem('speakMateGuestUser');
       setUser(null);
       setFirebaseUser(null);
@@ -613,6 +726,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resendVerificationEmail,
         deleteAccount,
         loginAsGuest,
+        recordPracticeSession,
       }}
     >
       {children}

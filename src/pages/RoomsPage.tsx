@@ -172,8 +172,12 @@ export const RoomsPage: React.FC<RoomsPageProps> = ({ onNavigate }) => {
       }
     };
 
+    window.addEventListener('fluencis:quick-match-found', handleQuickMatch);
     window.addEventListener('speakmate:quick-match-found', handleQuickMatch);
-    return () => window.removeEventListener('speakmate:quick-match-found', handleQuickMatch);
+    return () => {
+      window.removeEventListener('fluencis:quick-match-found', handleQuickMatch);
+      window.removeEventListener('speakmate:quick-match-found', handleQuickMatch);
+    };
   }, [onNavigate, quickMatchTopic]);
 
   // Also sync latestMatchData if received via context
@@ -373,7 +377,7 @@ export const RoomsPage: React.FC<RoomsPageProps> = ({ onNavigate }) => {
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#20f5a2] shadow-[0_0_10px_#20f5a2] animate-pulse" />
             <p className="text-xs font-bold tracking-[1.5px] text-[#20f5a2] uppercase">
-              SPEAKMATE REAL-TIME BACKEND ROOMS
+              FLUENCIS REAL-TIME BACKEND ROOMS
             </p>
           </div>
           <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">

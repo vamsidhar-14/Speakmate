@@ -82,7 +82,7 @@ export const PostSessionFeedbackModal: React.FC<PostSessionFeedbackModalProps> =
 
   const handleRefineWithAI = async () => {
     if (!constructiveNotes.trim()) {
-      setRefineWarning('Please type a quick note first, and SpeakMate AI will polish it into structured peer feedback.');
+      setRefineWarning('Please type a quick note first, and Fluencis AI will polish it into structured peer feedback.');
       setTimeout(() => setRefineWarning(null), 4000);
       return;
     }
