@@ -1,0 +1,310 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap");
+
+.aether-root {
+  --ae-ink: #1c1633;
+  --ae-mist: #d9ccf5;
+  --ae-lilac: #efe9fb;
+  overflow-x: clip;
+}
+
+/* ---------- Navbar (class added to existing nav) ---------- */
+.aether-nav {
+  background: rgba(255, 255, 255, 0.16) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 8px 30px rgba(60, 30, 140, 0.25);
+  margin: 12px auto 0;
+  width: min(calc(100% - 32px), 1280px);
+}
+.aether-nav-link {
+  color: #ffffff !important;
+  text-shadow: 0 1px 8px rgba(40, 20, 100, 0.4);
+}
+
+.aether-cta {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: var(--ae-ink) !important;
+  border-radius: 999px;
+  transition: transform 0.2s ease;
+}
+.aether-cta:hover { transform: translateY(-1px); }
+
+/* ---------- Hero ---------- */
+.aether-hero {
+  position: relative;
+  isolation: isolate;
+  color: #fff;
+  min-height: 100svh !important;
+  padding-top: 120px !important;
+  padding-bottom: 64px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background:
+    radial-gradient(60% 40% at 20% 15%, rgba(255, 150, 210, 0.55), transparent 70%),
+    radial-gradient(55% 40% at 85% 20%, rgba(255, 170, 220, 0.5), transparent 70%),
+    radial-gradient(70% 45% at 50% 70%, rgba(150, 120, 255, 0.55), transparent 75%),
+    linear-gradient(180deg, #7b8cff 0%, #9b7bff 35%, #c07be0 62%, #6a4bb8 100%) !important;
+}
+.aether-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.4;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 14% at 15% 62%, rgba(255, 255, 255, 0.55), transparent 70%),
+    radial-gradient(38% 12% at 80% 68%, rgba(255, 255, 255, 0.5), transparent 70%),
+    radial-gradient(50% 12% at 50% 78%, rgba(255, 230, 250, 0.45), transparent 70%);
+  filter: blur(14px);
+  animation: ae-drift 24s ease-in-out infinite alternate;
+}
+.aether-hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 35%;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, var(--ae-mist));
+}
+@keyframes ae-drift { from { transform: translateX(-2%); } to { transform: translateX(2%); } }
+
+.aether-hero-inner {
+  width: 100%;
+  max-width: 860px !important;
+  margin: 0 auto;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  gap: 28px !important;
+}
+
+.aether-hero-content {
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.aether-logo-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.aether-taglines {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  letter-spacing: 0.14em !important;
+  text-align: center;
+}
+
+.aether-title {
+  font-family: "Inter", system-ui, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.08 !important;
+  font-size: clamp(34px, 5vw, 68px) !important;
+  text-align: center !important;
+  color: #ffffff !important;
+  background: none !important;
+  -webkit-text-fill-color: #ffffff !important;
+  margin: 0 auto;
+}
+
+.aether-title-line {
+  display: block;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.aether-title-mint {
+  display: block;
+  color: #c8ffec !important;
+  -webkit-text-fill-color: #c8ffec !important;
+  background: none !important;
+  text-shadow: 0 2px 20px rgba(40, 20, 100, 0.35) !important;
+}
+
+.aether-title-sub {
+  display: block;
+  font-size: clamp(18px, 2.2vw, 26px) !important;
+  line-height: 1.3 !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.92) !important;
+  margin-top: 8px;
+}
+
+.aether-blurb {
+  color: rgba(255, 255, 255, 0.95) !important;
+  font-size: 17px !important;
+  line-height: 1.6 !important;
+  max-width: 52ch !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: center !important;
+}
+
+.aether-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+
+.aether-btn-primary {
+  background: #5eead4 !important;
+  color: #0f3d3a !important;
+}
+
+.aether-btn-secondary {
+  background: transparent !important;
+  border: 1px solid #ffffff !important;
+  color: #ffffff !important;
+}
+
+.aether-hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px !important;
+}
+
+.aether-hero-chip {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  padding: 6px 14px;
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.aether-hero-metrics {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.aether-mic-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  margin: 8px auto 0;
+  min-height: auto !important;
+}
+
+.aether-mic-card {
+  width: 220px !important;
+  height: 220px !important;
+}
+
+.aether-mic-glow {
+  opacity: 0.4 !important;
+  z-index: -1;
+}
+
+/* ---------- Light lilac sections (cards, CTA) ---------- */
+.aether-section-light {
+  background: linear-gradient(180deg, var(--ae-mist), var(--ae-lilac) 40%, var(--ae-lilac)) !important;
+  color: var(--ae-ink);
+}
+.aether-section-light :is(h1, h2, h3, h4, p, span, li) { color: inherit; }
+
+.aether-card {
+  background: rgba(255, 255, 255, 0.55) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 10px 30px rgba(110, 80, 200, 0.15);
+  color: var(--ae-ink);
+}
+.aether-card :is(h3, h4, p, span) { color: inherit; }
+
+/* ---------- Reveal paragraph ---------- */
+.aether-reveal-section {
+  background: linear-gradient(180deg, var(--ae-lilac), #b9a2ee 45%, var(--ae-mist)) !important;
+  color: #fff;
+}
+.aether-reveal-section :is(h1, h2, h3, span) { color: #fff; }
+.aether-reveal {
+  max-width: 760px;
+  line-height: 1.35;
+  font-size: clamp(20px, 2.6vw, 32px);
+  font-weight: 500;
+}
+.aether-word { opacity: 0.28; transition: opacity 0.25s linear; }
+.aether-word.on { opacity: 1; }
+
+/* ---------- Marquee ---------- */
+.aether-marquee { background: var(--ae-mist); padding: 32px 0; overflow: hidden; }
+.aether-marquee-row { display: flex; width: max-content; gap: 56px; margin: 0 0 16px; animation: ae-scroll 32s linear infinite; }
+.aether-marquee-row.rev { animation-direction: reverse; animation-duration: 38s; }
+.aether-chip { color: #4b3a8f; font-size: 15px; font-weight: 500; white-space: nowrap; }
+@keyframes ae-scroll { to { transform: translateX(-50%); } }
+
+/* ---------- Footer ---------- */
+.aether-footer {
+  background: #2a1f5c !important;
+  color: rgba(255, 255, 255, 0.85);
+}
+.aether-footer :is(p, a, span) { color: inherit; }
+
+@media (max-width: 700px) {
+  .aether-taglines { flex-direction: column; align-items: center; text-align: center; }
+  .aether-title { font-size: 34px !important; }
+  .aether-mic-wrap { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aether-hero::before, .aether-marquee-row { animation: none; }
+  .aether-word { opacity: 1; transition: none; }
+}
+
+/* ---------- 3D Hero Parallax ---------- */
+.aether-hero { perspective: 1200px; }
+.aether-layer {
+  will-change: transform;
+  transition: transform 0.15s ease-out;
+  transform: translate3d(calc(var(--mx, 0) * var(--depth, 0) * 1px), calc(var(--my, 0) * var(--depth, 0) * 1px), 0);
+}
+.aether-tilt {
+  transform-style: preserve-3d;
+  transform: perspective(900px) rotateX(calc(var(--ry, 0) * -1deg)) rotateY(calc(var(--rx, 0) * 1deg));
+  transition: transform 0.12s ease-out;
+  filter: drop-shadow(0 24px 36px rgba(40, 20, 100, 0.35));
+}
+.aether-layer.aether-tilt {
+  transform: translate3d(calc(var(--mx, 0) * var(--depth, 0) * 1px), calc(var(--my, 0) * var(--depth, 0) * 1px), 0) perspective(900px) rotateX(calc(var(--ry, 0) * -1deg)) rotateY(calc(var(--rx, 0) * 1deg));
+}
+.aether-depth-8 { --depth: 8; }
+.aether-depth-14 { --depth: 14; }
+.aether-depth-6 { --depth: 6; }
+.aether-depth-20 { --depth: 20; }
+.aether-depth-30 { --depth: 30; }
+.aether-depth-neg20 { --depth: -20; }
+@media (max-width: 700px), (prefers-reduced-motion: reduce) {
+  .aether-layer, .aether-tilt, .aether-layer.aether-tilt { transform: none; transition: none; }
+}

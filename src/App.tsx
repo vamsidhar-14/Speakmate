@@ -170,7 +170,7 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative selection:bg-[#20f5a2] selection:text-[#00131c]">
+    <div className={`${!isLoggedIn && currentTab === 'landing' ? 'aether-root ' : ''}min-h-screen flex flex-col relative selection:bg-[#20f5a2] selection:text-[#00131c]`}>
       <BackgroundEffects />
       <Navbar
         currentTab={currentTab}

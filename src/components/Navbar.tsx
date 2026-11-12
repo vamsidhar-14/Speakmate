@@ -46,7 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
   };
 
   return (
-    <nav className="h-[72px] px-4 md:px-8 lg:px-14 flex items-center justify-between border-b border-[rgba(0,200,255,0.16)] bg-[rgba(2,11,24,0.85)] backdrop-blur-xl sticky top-0 z-50 transition-colors">
+    <nav className={`${!isLoggedIn && currentTab === 'landing' ? 'aether-nav ' : ''}h-[72px] px-4 md:px-8 lg:px-14 flex items-center justify-between border-b border-[rgba(0,200,255,0.16)] bg-[rgba(2,11,24,0.85)] backdrop-blur-xl sticky top-0 z-50 transition-colors`}>
       {/* Brand Logo */}
       <button
         onClick={() => setCurrentTab(isLoggedIn ? 'dashboard' : 'landing')}
@@ -80,16 +80,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
         <div className="hidden md:flex items-center gap-6">
           <button
             onClick={() => setCurrentTab('landing')}
-            className={`text-sm font-medium ${
+            className={`aether-nav-link text-sm font-medium ${
               currentTab === 'landing' ? 'text-white' : 'text-[#9fb5c6] hover:text-white'
             }`}
           >
             Home
           </button>
-          <a href="#how-it-works" className="text-sm font-medium text-[#9fb5c6] hover:text-white">
+          <a href="#how-it-works" className="aether-nav-link text-sm font-medium text-[#9fb5c6] hover:text-white">
             How It Works
           </a>
-          <a href="#about" className="text-sm font-medium text-[#9fb5c6] hover:text-white">
+          <a href="#about" className="aether-nav-link text-sm font-medium text-[#9fb5c6] hover:text-white">
             About
           </a>
         </div>
@@ -229,7 +229,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, onOpe
             </button>
             <button
               onClick={() => setCurrentTab('signup')}
-              className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#20f5a2] to-[#00aaff] text-[#00131c] text-xs font-bold shadow-[0_4px_16px_rgba(0,210,255,0.25)] hover:shadow-[0_6px_22px_rgba(32,245,162,0.45)] hover:translate-y-[-1px] transition-all"
+              className="aether-cta px-4 py-1.5 rounded-full bg-gradient-to-r from-[#20f5a2] to-[#00aaff] text-[#00131c] text-xs font-bold shadow-[0_4px_16px_rgba(0,210,255,0.25)] hover:shadow-[0_6px_22px_rgba(32,245,162,0.45)] hover:translate-y-[-1px] transition-all"
             >
               Join Free
             </button>

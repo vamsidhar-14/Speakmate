@@ -3,7 +3,7 @@ import { FluencisLogo } from './FluencisLogo';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="relative z-10 text-center py-10 px-6 border-t border-[rgba(0,200,255,0.12)] bg-[#010812]">
+    <footer className="aether-footer relative z-10 text-center py-10 px-6 border-t border-[rgba(0,200,255,0.12)] bg-[#010812]">
       <div className="flex justify-center mb-3">
         <FluencisLogo size={32} showText={true} textClassName="text-xl" />
       </div>
